@@ -49,6 +49,7 @@ SOURCES += \
     OpenGL/widgets/oglTwidget2.cpp \
     main.cpp \
     mainwindow.cpp \
+    solution/Joint.cpp \
     solution/a2solution.cpp
 
 HEADERS += \
@@ -374,6 +375,7 @@ HEADERS += \
     dependencies/Eigen/src/plugins/MatrixCwiseUnaryOps.h \
     dependencies/json.hpp \
     mainwindow.h \
+    solution/Joint.h \
     solution/a2solution.h
 
 FORMS += \

@@ -2,10 +2,9 @@
 #define JOINT_H
 
 #include "dependencies/Eigen/Dense"
-#include "OpenGL/elements/joint2D.h"
-using Eigen::Vector2d;
-using Eigen::Vector3d;
+#include "OpenGL/elements/joint2d.h"
 using Eigen::Matrix3d;
+using Eigen::MatrixXf;
 
 class Joint
 {
