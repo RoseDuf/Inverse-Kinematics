@@ -70,21 +70,25 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos)
               delete p;
             }
             m_Joints.clear();
+            for (auto p : m_RotationalJoints)
+            {
+              delete p;
+            }
             m_RotationalJoints.clear();
         }
 
         m_Selected = selected;
         m_MousePos = mouse_pos;
 
-        applyTransformationsIK(mouse_pos);
+        QVector2D newMousePosition = FindNewPosition(mouse_pos);
+
+        applyTransformationsIK(newMousePosition);
         //applyTransformations(mouse_pos);
     }
 }
 
-void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
+QVector2D A2Solution::FindNewPosition(QVector2D mouse_pos)
 {
-    Joint2D* parentJoint = nullptr;
-
     if (m_Magnitude == 0)
     {
         QVector2D vecToJointParent = QVector2D(0, 0);
@@ -109,8 +113,11 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
         newMousePosition = mouse_pos;
     }
 
-     QVector2D goal = newMousePosition;
+    return newMousePosition;
+}
 
+void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
+{
      //In this exercise, the only end-effector is m_Selected
      Joint * end_effector = new Joint(m_Selected);
      m_EffectorJoints.push_back(end_effector);
@@ -121,14 +128,13 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
          effectorBranch(m_EffectorJoints[i]->GetJoint());
      }
 
-     //double distanceToGoal = sqrt(distanceFromGoal(goal).x() * distanceFromGoal(goal).x() + distanceFromGoal(goal).y() * distanceFromGoal(goal).y());
      for (int iterations = 0; iterations < 1; iterations++)
      {
         //1. Find the jacobian
         MatrixXd jac = jacobian(m_RotationalJoints, m_EffectorJoints);
 
         //2. Find delta_theta
-        VectorXd angle_changes_vector = dampedLeastSquares(jac, 15, distanceFromGoal(goal));
+        VectorXd angle_changes_vector = dampedLeastSquares(jac, 15, distanceFromGoal(newMousePosition));
 
         //Apply new angle to each rotational joint and apply FK
         for (int i = 0; i < m_RotationalJoints.size(); i++)
@@ -149,11 +155,11 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
                 pJoint = m_RotationalJoints[i]->GetJoint()->get_position();
             }
 
-            QVector2D newPosition = m_RotationalJoints[i]->GetJoint()->get_position();
+            QVector2D newPosition = convertToQtMath(m_RotationalJoints[i]->GetPosition());
 
             if (!m_RotationalJoints[i]->GetJoint()->is_locked())
             {
-                Vector2d vectorToParent = convertToEigenMath(m_RotationalJoints[i]->GetJoint()->get_position() - pJoint);
+                Vector2d vectorToParent = m_RotationalJoints[i]->GetPosition() - convertToEigenMath(pJoint);
                 Vector3d rotationalJointVector = Vector3d(vectorToParent.x(), vectorToParent.y(), 0);
                 //apply new rotation angle to joint and do Forward Kinematics
                 m_RotationMatrix(0, 0) = cos(angle_changes_vector[i-1]);
@@ -169,9 +175,11 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
 
             //4. FK transformations on each joint
             //might have to remove translations
-            m_TranslationTransf = translationTransformation(m_RotationalJoints[i]->GetJoint(), newPosition);
-            worldTransf *= m_TranslationTransf;
+            //m_TranslationTransf = translationTransformation(m_RotationalJoints[i]->GetJoint(), newPosition);
+            //worldTransf *= m_TranslationTransf;
             Traverse(m_RotationalJoints[i]->GetJoint(), worldTransf);
+
+            Joint2D* parentJoint = nullptr;
 
             //5. Update new position from FK transformations
             for (int j = 0; j < m_Joints.size(); j++)
@@ -183,7 +191,7 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
                 if (parentJoint != nullptr)
                 {
                     //solve matrices
-                    Vector2d jointPosition = convertToEigenMath(m_Joints[j]->GetJoint()->get_position());
+                    Vector2d jointPosition = m_Joints[j]->GetPosition();
                     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> colPivHouseholderQr(m_Joints[j]->GetTransfMatrix());
                     Vector3d jointPosition3D = Vector3d(jointPosition.x(), jointPosition.y(), 1);
                     Vector3d newPosition3D = colPivHouseholderQr.solve(jointPosition3D);
@@ -199,24 +207,44 @@ void A2Solution::applyTransformationsIK(QVector2D mouse_pos)
                     }
 
                     //update positions
-                    m_Joints[j]->GetJoint()->set_position(convertToQtMath(newPosition2D));
+                    m_Joints[j]->SetPosition(newPosition2D);
+
+                    for (int x = 0; x < m_RotationalJoints.size(); x++)
+                    {
+                        if (m_Joints[j]->GetJoint() == m_RotationalJoints[x]->GetJoint())
+                        {
+                            m_RotationalJoints[x]->SetPosition(newPosition2D);
+                            break;
+                        }
+                    }
 
                     parentJoint = m_Joints[j]->GetJoint();
                 }
             }
 
+            for (auto p : m_Joints)
+            {
+              delete p;
+            }
             m_Joints.clear();
         }
-
-        //distanceToGoal = sqrt(distanceFromGoal(goal).x() * distanceFromGoal(goal).x() + distanceFromGoal(goal).y() * distanceFromGoal(goal).y());
      }
 
+     for (int i = 0; i < m_RotationalJoints.size(); i++)
+     {
+         m_RotationalJoints[i]->GetJoint()->set_position(convertToQtMath(m_RotationalJoints[i]->GetPosition()));
+     }
+
+     for (auto p : m_EffectorJoints)
+     {
+       delete p;
+     }
      m_EffectorJoints.clear();
 }
 
 Vector2d A2Solution::distanceFromGoal(QVector2D goal)
 {
-    Vector2d distanceVector = convertToEigenMath(m_Selected->get_position() - goal);
+    Vector2d distanceVector = convertToEigenMath(goal - m_Selected->get_position());
     return distanceVector;
 }
 
@@ -250,6 +278,7 @@ void A2Solution::effectorBranch(Joint2D* sibling)
     if (createNewJoint)
     {
         newJoint = new Joint(sibling);
+        newJoint->SetPosition(convertToEigenMath(sibling->get_position()));
         m_RotationalJoints.push_back(newJoint);
     }
 }
@@ -363,6 +392,8 @@ void A2Solution::Traverse(Joint2D* sibling, Matrix3d worldTransf)
 
     if (createNewJoint)
     {
+        //TODO: look into how to set the new position
+        newJoint->SetPosition(convertToEigenMath(sibling->get_position()));
         m_Joints.push_back(newJoint);
     }
 

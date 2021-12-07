@@ -44,7 +44,7 @@ private:
     void applyTransformations(QVector2D mouse_pos);
     Vector2d distanceFromGoal(QVector2D goal);
     void effectorBranch(Joint2D* end_effector);
-    Matrix3d rotationTransformation(Matrix3d rotationMatrix, Joint2D* joint);
+    Matrix3d rotationTransformation(Matrix3d rotationMatrix, Joint* joint);
     Matrix3d translationTransformation(Joint2D* joint, QVector2D mouse_pos);
     void Traverse(Joint2D* sibling, Matrix3d worldTransf);
     Vector2d convertToEigenMath(QVector2D vector);
@@ -52,6 +52,8 @@ private:
     float getRotationAngle(Joint2D* joint, QVector2D new_pos);
     MatrixXd jacobian(std::vector<Joint*> joints, std::vector<Joint*> end_effectors);
     VectorXd dampedLeastSquares(MatrixXd jac, float damping_factor, VectorXd error_vector);
+
+    QVector2D FindNewPosition(QVector2D mouse_pos);
 
     bool m_IsInitialized;
     std::vector<Joint2D*> m_CurrentJoints;
