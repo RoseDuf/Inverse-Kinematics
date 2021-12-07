@@ -120,6 +120,7 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
 {
      //In this exercise, the only end-effector is m_Selected
      Joint * end_effector = new Joint(m_Selected);
+     end_effector->SetPosition(convertToEigenMath(m_Selected->get_position()));
      m_EffectorJoints.push_back(end_effector);
 
      //Allow flexibility in case there is more thand one effector.
@@ -159,24 +160,29 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
 
             if (!m_RotationalJoints[i]->GetJoint()->is_locked())
             {
-                Vector2d vectorToParent = m_RotationalJoints[i]->GetPosition() - convertToEigenMath(pJoint);
-                Vector3d rotationalJointVector = Vector3d(vectorToParent.x(), vectorToParent.y(), 0);
                 //apply new rotation angle to joint and do Forward Kinematics
                 m_RotationMatrix(0, 0) = cos(angle_changes_vector[i-1]);
                 m_RotationMatrix(0, 1) = sin(angle_changes_vector[i-1]);
                 m_RotationMatrix(1, 0) = -sin(angle_changes_vector[i-1]);
                 m_RotationMatrix(1, 1) = cos(angle_changes_vector[i-1]);
 
+                Vector2d vectorToParent = m_RotationalJoints[i]->GetPosition() - convertToEigenMath(pJoint);
+
+                double direction_angle = atan2(vectorToParent.y(), vectorToParent.x());
+                direction_angle += angle_changes_vector[i-1];
+
                 //Find small translation transformation for joint
-                Vector3d newPos = m_RotationMatrix * rotationalJointVector;
-                QVector2D rotatedPos = convertToQtMath(Vector2d(newPos.x(), newPos.y()));
+                Vector2d newPos = Vector2d(m_RotationalJoints[i]->GetMagnitude() * cos(direction_angle), m_RotationalJoints[i]->GetMagnitude() * sin(direction_angle));
+
+                //Find small translation transformation for joint
+                QVector2D rotatedPos = convertToQtMath(newPos);
                 newPosition = pJoint + rotatedPos;
             }
 
             //4. FK transformations on each joint
             //might have to remove translations
-            //m_TranslationTransf = translationTransformation(m_RotationalJoints[i]->GetJoint(), newPosition);
-            //worldTransf *= m_TranslationTransf;
+            m_TranslationTransf = translationTransformation(m_RotationalJoints[i]->GetJoint(), newPosition);
+            worldTransf *= m_TranslationTransf;
             Traverse(m_RotationalJoints[i]->GetJoint(), worldTransf);
 
             Joint2D* parentJoint = nullptr;
@@ -188,7 +194,7 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
                 {
                     parentJoint = m_Joints[j]->GetJoint();
                 }
-                if (parentJoint != nullptr)
+                if (parentJoint != nullptr && m_Joints[j]->GetTransfMatrix() != Matrix3d::Identity())
                 {
                     //solve matrices
                     Vector2d jointPosition = m_Joints[j]->GetPosition();
@@ -264,18 +270,16 @@ void A2Solution::effectorBranch(Joint2D* sibling)
         }
     }
 
-    Joint * newJoint;
-    bool createNewJoint = true;
+    Joint * newJoint = nullptr;
     for (int i = 0; i < m_RotationalJoints.size(); i++)
     {
         if (sibling == m_RotationalJoints[i]->GetJoint())
         {
-            createNewJoint = false;
             newJoint = m_RotationalJoints[i];
             break;
         }
     }
-    if (createNewJoint)
+    if (newJoint == nullptr)
     {
         newJoint = new Joint(sibling);
         newJoint->SetPosition(convertToEigenMath(sibling->get_position()));
@@ -385,15 +389,13 @@ void A2Solution::Traverse(Joint2D* sibling, Matrix3d worldTransf)
     }
 
     //transformation matrices
-    m_RotationTransf = rotationTransformation(m_RotationMatrix, newJoint->GetJoint());
+    m_RotationTransf = rotationTransformation(m_RotationMatrix, newJoint);
     worldTransf *= m_RotationTransf;
 
     newJoint->SetTransfMatrix(worldTransf);
 
     if (createNewJoint)
     {
-        //TODO: look into how to set the new position
-        newJoint->SetPosition(convertToEigenMath(sibling->get_position()));
         m_Joints.push_back(newJoint);
     }
 
@@ -409,9 +411,9 @@ void A2Solution::Traverse(Joint2D* sibling, Matrix3d worldTransf)
 
 }
 
-Matrix3d A2Solution::rotationTransformation(Matrix3d rotationMatrix, Joint2D* joint)
+Matrix3d A2Solution::rotationTransformation(Matrix3d rotationMatrix, Joint* joint)
 {
-    Vector2d jointPosition = convertToEigenMath(joint->get_position());
+    Vector2d jointPosition = joint->GetPosition();
 
     Matrix3d firstTranslation = Matrix3d::Identity();
     Vector2d translation = -Vector2d(jointPosition);
@@ -498,25 +500,25 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> joints, std::vector<Joint*> en
     MatrixXd jac(num_rows, num_columns);
 
     // Go through the columns of J
-    for (int col = 0; col < num_columns; col++)
+    for (int col = 0; col < joints.size(); col++)
     {
         Vector3d joint_vectorForm(3);
-        joint_vectorForm(0) = joints[col]->GetJoint()->get_position().x();
-        joint_vectorForm(1) = joints[col]->GetJoint()->get_position().y();
+        joint_vectorForm(0) = joints[col]->GetPosition().x();
+        joint_vectorForm(1) = joints[col]->GetPosition().y();
         joint_vectorForm(2) = 0;
 
         std::vector<Vector3d> end_effectors_vector;
         for (int i = 0; i < end_effectors.size(); i++)
         {
             Vector3d end_effector_vectorForm(3);
-            end_effector_vectorForm(0) = end_effectors[i]->GetJoint()->get_position().x();
-            end_effector_vectorForm(1) = end_effectors[i]->GetJoint()->get_position().y();
+            end_effector_vectorForm(0) = end_effectors[i]->GetPosition().x();
+            end_effector_vectorForm(1) = end_effectors[i]->GetPosition().y();
             end_effector_vectorForm(2) = 0;
 
             end_effectors_vector.push_back(axis_of_rotation.cross(end_effector_vectorForm - joint_vectorForm));
         }
 
-        for (int row = 0; row < num_rows; row += 2)
+        for (int row = 0; row < 2 * end_effectors.size(); row += 2)
         {
             jac(row, col) = end_effectors_vector[row].x();
             jac(row + 1, col) = end_effectors_vector[row].y();
