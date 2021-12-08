@@ -137,10 +137,10 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
          }
      }
 
-     for (int iterations = 0; iterations < 50; iterations++)
+     for (int iterations = 0; iterations < 1; iterations++)
      {
         //1. Find the jacobian
-        MatrixXd jac = jacobian(m_RotationalJoints, m_EffectorJoints);
+        MatrixXd jac = jacobian(m_EffectorJoints);
 
         //2. Find delta_theta
         VectorXd angle_changes_vector = dampedLeastSquares(jac, 15, distanceFromGoal(newMousePosition));
@@ -495,20 +495,20 @@ QVector2D A2Solution::convertToQtMath(Vector2d vector)
     return QVector2D(vector.x(), -vector.y());
 }
 
-MatrixXd A2Solution::jacobian(std::vector<Joint*> joints, std::vector<Joint*> end_effectors)
+MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
 {
     Vector3d axis_of_rotation = Vector3d(0, 0, 1);
 
-    int num_columns = joints.size();
+    int num_columns = m_RotationalJoints.size();
     int num_rows = 2 * end_effectors.size();
     MatrixXd jac(num_rows, num_columns);
 
     // Go through the columns of J
-    for (int col = 0; col < joints.size(); col++)
+    for (int col = 0; col < num_columns; col++)
     {
         Vector3d joint_vectorForm(3);
-        joint_vectorForm(0) = joints[col]->GetJoint()->get_position().x();
-        joint_vectorForm(1) = joints[col]->GetJoint()->get_position().y();
+        joint_vectorForm(0) =  m_RotationalJoints[col]->GetJoint()->get_position().x();
+        joint_vectorForm(1) =  m_RotationalJoints[col]->GetJoint()->get_position().y();
         joint_vectorForm(2) = 0;
 
         std::vector<Vector3d> end_effectors_vector;
@@ -522,7 +522,7 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> joints, std::vector<Joint*> en
             end_effectors_vector.push_back(axis_of_rotation.cross(end_effector_vectorForm - joint_vectorForm));
         }
 
-        for (int row = 0; row < 2 * end_effectors.size(); row += 2)
+        for (int row = 0; row < num_rows; row += 2)
         {
             jac(row, col) = end_effectors_vector[row].x();
             jac(row + 1, col) = end_effectors_vector[row].y();
