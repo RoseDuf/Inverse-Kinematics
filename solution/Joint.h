@@ -4,7 +4,6 @@
 #include "dependencies/Eigen/Dense"
 #include "OpenGL/elements/joint2d.h"
 using Eigen::Matrix3d;
-using Eigen::MatrixXf;
 using Eigen::Vector2d;
 
 class Joint
@@ -29,6 +28,8 @@ public:
     inline void AddChild(Joint2D* child) {m_Children.push_back(child);}
     inline Vector2d GetPosition() const {return m_position;}
     inline void SetPosition(Vector2d position) {m_position = position;}
+    inline bool GetIsEndEffector() const {return m_isEndEffector;}
+    inline void SetIsEndEffector(bool isEndEffector) {m_isEndEffector = isEndEffector;}
 
 private:
     Vector2d m_position;
@@ -36,6 +37,7 @@ private:
     Matrix3d m_TransfMatrix;
     Joint2D* m_CorrespondingJoint;
     std::vector<Joint2D*> m_Children;
+    bool m_isEndEffector;
 };
 
 #endif // JOINT_H

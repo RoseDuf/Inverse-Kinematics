@@ -12,6 +12,7 @@ Joint::Joint(Joint2D* correspondingJoint)
     m_TransfMatrix = Matrix3d::Identity();
     m_CorrespondingJoint = correspondingJoint;
     m_Magnitude = 0;
+    m_isEndEffector = false;
 
     for (int i = 0; i < correspondingJoint->get_children().size(); i++)
     {
