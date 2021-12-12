@@ -120,7 +120,7 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
         MatrixXd jac = jacobian(end_effectors);
 
         //2. Find delta_theta
-        VectorXd angle_changes_vector = dampedLeastSquares(jac, 15, distanceFromGoal(newMousePosition, end_effectors));
+        VectorXd angle_changes_vector = dampedLeastSquares(jac, 12, distanceFromGoal(newMousePosition, end_effectors));
 
         //3. Apply new angle to each rotational joint and apply FK
         for (int i = 1; i < m_RotationalJoints.size(); i++)
@@ -185,6 +185,10 @@ Vector2d A2Solution::distanceFromGoal(QVector2D goal, std::vector<Joint*> end_ef
         if (end_effectors[i]->GetJoint() == m_Selected)
         {
             distanceVector = convertToEigenMath(goal) - end_effectors[i]->GetPosition();
+            // clamp/downscale error vector
+            if (distanceVector.norm() != 0)
+                distanceVector *= (std::min(1.0, distanceVector.norm()) / distanceVector.norm());
+            break;
         }
     }
 
@@ -353,7 +357,14 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
             end_effector_vectorForm(1) = end_effectors[i]->GetPosition().y();
             end_effector_vectorForm(2) = 0;
 
-            end_effectors_vector.push_back((-axis_of_rotation.cross(end_effector_vectorForm - joint_vectorForm)).normalized());
+            if (!is_descendant_of(end_effectors[i]->GetJoint(), m_RotationalJoints[col]->GetJoint()))
+            {
+                end_effectors_vector.push_back(Vector3d(0, 0, 0));
+            }
+            else
+            {
+                end_effectors_vector.push_back((-axis_of_rotation.cross(end_effector_vectorForm - joint_vectorForm)).normalized());
+            }
         }
 
         for (int row = 0; row < num_rows; row += 2)
@@ -364,6 +375,19 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
     }
 
     return jac;
+}
+
+bool A2Solution::is_descendant_of(Joint2D* child, Joint2D* ancestor)
+{
+    while (!child->get_parents().empty())
+    {
+        if (child->get_parents()[0] == ancestor)
+            return true;
+
+        child = child->get_parents()[0];
+    }
+
+    return false;
 }
 
 VectorXd A2Solution::dampedLeastSquares(MatrixXd jac, float damping_factor, VectorXd error_vector)

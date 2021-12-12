@@ -54,6 +54,7 @@ private:
     QVector2D convertToQtMath(Vector2d vector);
     float getRotationAngle(Joint2D* joint, QVector2D new_pos);
     MatrixXd jacobian(std::vector<Joint*> end_effectors);
+    bool is_descendant_of(Joint2D* child, Joint2D* ancestor);
     VectorXd dampedLeastSquares(MatrixXd jac, float damping_factor, VectorXd error_vector);
 
     QVector2D FindNewPosition(QVector2D mouse_pos);
