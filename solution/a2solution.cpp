@@ -97,30 +97,21 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
          construct_joint_hierarchy_tree(m_Selected);
      }
 
-     //if (m_EffectorJoints.size() == 0)
-     //{
-     //    Joint* e_Joint = new Joint(m_Selected);
-     //    e_Joint->SetPosition(convertToEigenMath(m_Selected->get_position()));
-     //    e_Joint->SetIsEndEffector(true);
-     //    m_EffectorJoints.push_back(e_Joint);
-     //}
+     if (m_EffectorJoints.size() == 0)
+     {
+         Joint* e_Joint = new Joint(m_Selected);
+         e_Joint->SetPosition(convertToEigenMath(m_Selected->get_position()));
+         e_Joint->SetIsEndEffector(true);
+         m_EffectorJoints.push_back(e_Joint);
+     }
 
      for (int iterations = 0; iterations < 50; iterations++)
      {
-         std::vector<Joint*> end_effectors;
-         for (int x = 0; x < m_RotationalJoints.size(); x++)
-         {
-            if (m_RotationalJoints[x]->GetIsEndEffector())
-            {
-                end_effectors.push_back(m_RotationalJoints[x]);
-            }
-         }
-
         //1. Find the jacobian
-        MatrixXd jac = jacobian(end_effectors);
+        MatrixXd jac = jacobian(m_EffectorJoints);
 
         //2. Find delta_theta
-        VectorXd angle_changes_vector = dampedLeastSquares(jac, 12, distanceFromGoal(newMousePosition, end_effectors));
+        VectorXd angle_changes_vector = dampedLeastSquares(jac, 12, distanceFromGoal(newMousePosition, m_EffectorJoints));
 
         //3. Apply new angle to each rotational joint and apply FK
         for (int i = 1; i < m_RotationalJoints.size(); i++)
@@ -140,7 +131,10 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
                 }
             }
 
-            double angle = angle_changes_vector[i-1];
+            double angle = 0;
+
+            if (is_descendant_of(m_EffectorJoints[0]->GetJoint(), m_RotationalJoints[i]->GetJoint()) || m_RotationalJoints[i]->GetIsEndEffector())
+                angle = angle_changes_vector[i-1];
 
             m_RotationMatrix = Matrix3d::Identity();
             m_RotationMatrix(0, 0) = cos(angle);
@@ -161,6 +155,10 @@ void A2Solution::applyTransformationsIK(QVector2D newMousePosition)
                     if (m_Joints[j]->GetJoint() == m_RotationalJoints[x]->GetJoint())
                     {
                         m_RotationalJoints[x]->SetPosition(m_Joints[j]->GetPosition());
+                        if (m_RotationalJoints[x]->GetIsEndEffector())
+                        {
+                            m_EffectorJoints[0]->SetPosition(m_Joints[j]->GetPosition());
+                        }
                         break;
                     }
                 }
@@ -255,7 +253,15 @@ void A2Solution::apply_rotation(Joint2D* joint, Vector2d parent_to_joint, Vector
         }
     }
 
-    Vector2d old_pos = parent_to_joint + parent_pos;
+    Vector2d old_pos;
+    for (int i = 0; i < m_RotationalJoints.size(); i++)
+    {
+        if (joint == m_RotationalJoints[i]->GetJoint())
+        {
+            old_pos = m_RotationalJoints[i]->GetPosition();
+        }
+    }
+
     Vector3d new_pos = (m_RotationMatrix * Vector3d(parent_to_joint.x(), parent_to_joint.y(), 1)) + Vector3d(parent_pos.x(), parent_pos.y(), 1);
     Vector2d new_pos_2d = Vector2d(new_pos.x(), new_pos.y());
 
