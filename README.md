@@ -11,7 +11,7 @@ IK has more steps than FK.
 1. Find the jacobian matrix of the partial derives of the end-effector's position with respect to its change in angle:
 This can be done using this equation, taken from this [paper](http://math.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf)
 
-'![equation]()'
+'![equation](Inverse-Kinematics/images/equation.jpg)'
 **v** = axis of rotation (in 2D this will be the z axis, or the vector <0, 0, 1>)
 **s** = end-effector's position
 **p** = end-effector ancestor joint positions
@@ -62,7 +62,7 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
 ```
 2. Find the changes in angles (delta theta) that will eventually be applied to each joint in the tree using the jacobian.
 This can be done in multiple ways, but I used the Damping Least Squares method:
-'![damping]()'
+'![damping](Inverse-Kinematics/images/damping.jpg)'
 **J** = jacobian matrix
 **lambda** = damping factor
 **I** = identity matrix
