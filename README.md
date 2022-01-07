@@ -8,7 +8,7 @@ IK, much like Forward Kinematics, is a behaviour that is used in animation softw
 IK has more steps than FK.
 
 ### In Practice
-1. Find the jacobian matrix of the partial derives of the end-effector's position with respect to its change in angle:  
+1. Find the jacobian matrix of the partial derives of the end-effector's position with respect to its change in angle: 
 This can be done using this equation, taken from this [paper](http://math.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf)
   
 ![equation](/images/jac.png)
