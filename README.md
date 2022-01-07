@@ -12,6 +12,7 @@ IK has more steps than FK.
 This can be done using this equation, taken from this [paper](http://math.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf)
 
 ![equation](/images/equation.jpg)
+
 **v** = axis of rotation (in 2D this will be the z axis, or the vector <0, 0, 1>)
 **s** = end-effector's position
 **p** = end-effector ancestor joint positions
