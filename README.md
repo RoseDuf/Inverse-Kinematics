@@ -1,7 +1,7 @@
 # Inverse-Kinematics
 simple inverse kinematics simulator for Computer Animations
 
-###What is Inverse Kinematics (IK)?
+### What is Inverse Kinematics (IK)?
 IK, much like Forward Kinematics, is a behaviour that is used in animation softwares, such as Blender, MAYA, Flash 8 (for 2D), and more. It is also used in game engines to predict player movements, in robotics and even in biology (protein folding)! Inverse Kinematics is used for many of the same reasons as FK, but adds much functionality to a body's rig. This is because, instead of projecting the new positions of child joints from changes done to their parent, IK does the inverse! It will in fact use the user's modifications from a child joint (called end-effector) and adjust all of its parent's joints to realistically fit the new position.
 
 ### How does Forward Kinematics (FK) work?
@@ -11,7 +11,7 @@ IK has more steps than FK.
 1. Find the jacobian matrix of the partial derives of the end-effector's position with respect to its change in angle:
 This can be done using this equation, taken from this [paper](http://math.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf)
 
-![equation](Inverse-Kinematics/images/equation.jpg)
+![equation](/images/equation.jpg)
 **v** = axis of rotation (in 2D this will be the z axis, or the vector <0, 0, 1>)
 **s** = end-effector's position
 **p** = end-effector ancestor joint positions
@@ -62,7 +62,7 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
 ```
 2. Find the changes in angles (delta theta) that will eventually be applied to each joint in the tree using the jacobian.
 This can be done in multiple ways, but I used the Damping Least Squares method:
-![damping](Inverse-Kinematics/images/damping.jpg)
+![damping](/images/damping.jpg)
 **J** = jacobian matrix
 **lambda** = damping factor
 **I** = identity matrix
@@ -85,7 +85,7 @@ VectorXd A2Solution::dampedLeastSquares(MatrixXd jac, float damping_factor, Vect
 ```
 for (int i = 1; i < m_RotationalJoints.size(); i++)
 ```
--(a) Update the rotational matrix using the appropriate delta theta angle coresponding to a joint
+- (a) Update the rotational matrix using the appropriate delta theta angle coresponding to a joint
 ```
 double angle = 0;
 
@@ -98,7 +98,7 @@ m_RotationMatrix(0, 1) = sin(angle);
 m_RotationMatrix(1, 0) = -sin(angle);
 m_RotationMatrix(1, 1) = cos(angle);
 ```
--(b) Do a FK pass from this joint to all of its children to find their new positions that will be "stored".
+- (b) Do a FK pass from this joint to all of its children to find their new positions that will be "stored".
 ```
 void A2Solution::RotationTransformations(Joint2D* joint, Vector2d parent_to_joint, Vector2d parent_pos)
 {
@@ -160,7 +160,7 @@ void A2Solution::RotationTransformations(Joint2D* joint, Vector2d parent_to_join
     updatePositions();
 }
 ```
--(c) Repeat process for next joint
+- (c) Repeat process for next joint
 4. Update the new positions of all joints using the "stored" new positions mentionned in step 3.b.
 ```
  for (int i = 0; i < m_RotationalJoints.size(); i++)
