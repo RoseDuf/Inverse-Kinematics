@@ -63,7 +63,6 @@ MatrixXd A2Solution::jacobian(std::vector<Joint*> end_effectors)
 2. Find the changes in angles (delta theta) that will eventually be applied to each joint in the tree using the jacobian.
 This can be done in multiple ways, but I used the Damping Least Squares method:
 '![damping]()'
-
 **J** = jacobian matrix
 **lambda** = damping factor
 **I** = identity matrix
